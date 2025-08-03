@@ -1,13 +1,18 @@
+# This file is only compatible for ubuntu (for now)
+
+# Firecracker uses KVM (Kernel Virtual Manager). It helps the host kernel to acts as a hypervisor
+# We can't setup firecracker the host doesn't have KVM
 kvm=$(lsmod | grep kvm)
 if [[ -z $kvm ]]; then
     echo "KVM not found, can't proceed"
     exit 1;
 fi
 
-# install acl
+# install acl (Access Control list)
 sudo apt update
 sudo apt install acl
 
+# the process should have the permission to read and write to kvm
 sudo setfacl -m u:${USER}:rw /dev/kvm
 
 ans=$([ -r /dev/kvm ] && [ -w /dev/kvm ] && echo "OK" || echo "FAIL")
