@@ -1,8 +1,10 @@
 package internal
 
 import (
+	"context"
 	"fmt"
 	"os"
+	"time"
 
 	amqp "github.com/rabbitmq/amqp091-go"
 )
@@ -14,8 +16,9 @@ type JobQueue struct {
 	queue   amqp.Queue
 }
 
-func (qu *JobQueue) Push(id string) (bool, error) {
-	err := qu.channel.Publish(
+func (qu *JobQueue) Push(ctx context.Context, id string) error {
+	return qu.channel.PublishWithContext(
+		ctx,
 		"",
 		id,
 		false,
@@ -23,17 +26,12 @@ func (qu *JobQueue) Push(id string) (bool, error) {
 		amqp.Publishing{
 			ContentType: "text/plain",
 			Body:        []byte(id),
+			Timestamp:   time.Now(),
 		},
 	)
-
-	if err != nil {
-		return false, err
-	}
-
-	return true, nil
 }
 
-func (qu *JobQueue) Consume() (<-chan amqp.Delivery, error) {
+func (qu *JobQueue) Consume(ctx context.Context) (<-chan amqp.Delivery, error) {
 	return qu.channel.Consume(mainQueueName, "", true, false, false, false, nil)
 }
 
@@ -53,7 +51,7 @@ func GetQueue() (*JobQueue, error) {
 	}
 	defer ch.Close()
 
-	q, err := ch.QueueDeclare(mainQueueName, false, false, false, false, nil)
+	q, err := ch.QueueDeclare(mainQueueName, true, false, false, false, nil)
 	if err != nil {
 		fmt.Printf("Error creating a queue %v", err)
 		panic(err)
